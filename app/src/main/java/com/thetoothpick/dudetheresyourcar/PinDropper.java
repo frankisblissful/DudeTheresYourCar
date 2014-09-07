@@ -1,4 +1,4 @@
-package com.thetoothpick.bluetoothpindrop;
+package com.thetoothpick.dudetheresyourcar;
 
 import android.location.Criteria;
 import android.location.Location;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.thetoothpick.bluetoothpindrop" >
+    package="com.thetoothpick.dudetheresyourcar" >
 
     <application
         android:allowBackup="true"
@@ -8,7 +8,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".MapsActivity"
+            android:name="com.thetoothpick.dudetheresyourcar.MapsActivity"
             android:label="@string/title_activity_maps" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,7 +21,7 @@
             android:value="@integer/google_play_services_version" />
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyAbUCJ0HQUq3MBeN8JAYanxIVYX31ZgplE" />
+            android:value="AIzaSyCV1UuCaokNWtBEpJpjGLe2aoFTK22MJBM" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

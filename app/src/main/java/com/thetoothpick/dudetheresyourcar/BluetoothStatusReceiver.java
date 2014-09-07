@@ -1,4 +1,4 @@
-package com.thetoothpick.bluetoothpindrop;
+package com.thetoothpick.dudetheresyourcar;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -27,7 +27,7 @@ public class BluetoothStatusReceiver extends BroadcastReceiver{
             return;
         }
         if (action.equals(BluetoothDevice.ACTION_ACL_DISCONNECTED)){
-            pinDropper.dropPinForBluetoothDisconnect("Car location?");
+            pinDropper.dropPinForBluetoothDisconnect("Dude, there's your car?");
         }
         if (action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)){
             Toast.makeText(context, "bluetooth connected", Toast.LENGTH_SHORT).show();
