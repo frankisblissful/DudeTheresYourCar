@@ -21,8 +21,6 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 
-import java.util.ArrayList;
-
 public class MapsActivity extends FragmentActivity implements GooglePlayServicesClient.ConnectionCallbacks,
         GooglePlayServicesClient.OnConnectionFailedListener {
 
@@ -40,11 +38,13 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     private static final String TAG = "MapsActivity";
 
+    private static final String lastBluetoothDisconnectLocationKey = "lastBluetoothDisconnectLocationKey";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        setUpMapIfNeeded();
+        setUpMapIfNeeded(savedInstanceState);
         setUpBluetoothReceiver();
     }
 
@@ -52,7 +52,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
     @Override
     protected void onResume() {
         super.onResume();
-        setUpMapIfNeeded();
         setUpBluetoothReceiver();
     }
 
@@ -70,12 +69,12 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
      * have been completely destroyed during this process (it is likely that it would only be
      * stopped or paused), {@link #onCreate(Bundle)} may not be called again so we should call this
      * method in {@link #onResume()} to guarantee that it will be called.
+     *
+     * @param savedInstanceState
      */
-    private void setUpMapIfNeeded() {
-        Log.d(TAG, "enter setUpMapIfNeeded");
+    private void setUpMapIfNeeded(Bundle savedInstanceState) {
         // Do a null check to confirm that we have not already instantiated the map.
         if (googleMap == null) {
-            Log.d(TAG, "googleMap == null");
             // Try to obtain the map from the SupportMapFragment.
             googleMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
                     .getMap();
@@ -86,16 +85,17 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
                 locationClient = new LocationClient(this, this, this);
                 locationClient.connect();
                 pinDropper = new PinDropper(googleMap, locationManager, locationClient);
+                if (savedInstanceState != null) {
+                    pinDropper.setLastBlueToothDisconnectLocation((Location) savedInstanceState.getParcelable(lastBluetoothDisconnectLocationKey));
+                }
                 setUpMap();
             }
         } else {
-            Log.d(TAG, "googleMap != null");
             locationClient.connect();
         }
     }
 
     private void setUpBluetoothReceiver() {
-        Log.d(TAG, "enter setUpBluetoothReceiver");
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -116,7 +116,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
      * This should only be called once and when we are sure that {@link #googleMap} is not null.
      */
     private void setUpMap() {
-        Log.d(TAG, "enter setUpMap");
         float zoom = 15;
         Location initialPin = pinDropper.dropPinForOldBluetoothDisconnect("Car Location?");
         if (initialPin == null) {
@@ -135,11 +134,13 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putParcelable(lastBluetoothDisconnectLocationKey, pinDropper.getLastBlueToothDisconnectLocation());
+    }
+
+    @Override
     protected void onStop() {
-        Log.d(TAG, "onStop");
-        for (StackTraceElement stackTraceElement : new Error().getStackTrace()){
-            Log.d(TAG, stackTraceElement.toString());
-        }
         locationClient.disconnect();
         this.unregisterReceiver(bluetoothStatusReceiver);
         super.onStop();
