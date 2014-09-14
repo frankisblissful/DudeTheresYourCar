@@ -19,39 +19,39 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements GooglePlayServicesClient.ConnectionCallbacks,
         GooglePlayServicesClient.OnConnectionFailedListener {
 
     private GoogleMap googleMap; // Might be null if Google Play services APK is not available.
 
-    private BluetoothAdapter bluetoothAdapter;
+    private static final String TAG = "MapsActivity";
+
+    private BluetoothFinder bluetoothFinder = null;
+
+    private BluetoothStatusReceiver bluetoothStatusReceiver = null;
 
     private LocationManager locationManager;
-
-    private BluetoothStatusReceiver bluetoothStatusReceiver;
-
     private LocationClient locationClient;
 
-    private PinDropper pinDropper;
-
-    private static final String TAG = "MapsActivity";
 
     private static final String lastBluetoothDisconnectLocationKey = "lastBluetoothDisconnectLocationKey";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded(savedInstanceState);
-        setUpBluetoothReceiver();
+        bluetoothStatusReceiver = new BluetoothStatusReceiver(bluetoothFinder, googleMap);
+        bluetoothStatusReceiver.registerTo(this);
     }
 
 
     @Override
     protected void onResume() {
         super.onResume();
-        setUpBluetoothReceiver();
     }
 
     /**
@@ -73,41 +73,35 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
      */
     private void setUpMapIfNeeded(Bundle savedInstanceState) {
         // Do a null check to confirm that we have not already instantiated the map.
+
         if (googleMap == null) {
             // Try to obtain the map from the SupportMapFragment.
             googleMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
                     .getMap();
-            // Check if we were successful in obtaining the map.
-            if (googleMap != null) {
-                googleMap.setMyLocationEnabled(true);
-                locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-                locationClient = new LocationClient(this, this, this);
-                locationClient.connect();
-                pinDropper = new PinDropper(googleMap, locationManager, locationClient);
-                if (savedInstanceState != null) {
-                    pinDropper.setLastBlueToothDisconnectLocation((Location) savedInstanceState.getParcelable(lastBluetoothDisconnectLocationKey));
-                }
-                setUpMap();
+        }
+        if (locationManager == null) {
+            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        }
+        if (locationClient == null) {
+            locationClient = new LocationClient(this, this, this);
+        }
+        locationClient.connect();
+        // Check if we were successful in obtaining the map.
+
+        if (bluetoothFinder == null){
+            bluetoothFinder = new BluetoothFinder(BluetoothAdapter.getDefaultAdapter(), locationManager, locationClient);
+            if (savedInstanceState != null){
+                bluetoothFinder.setLastBluetoothDisconnectLocation((Location) savedInstanceState.getParcelable(lastBluetoothDisconnectLocationKey));
             }
-        } else {
-            locationClient.connect();
+        }
+        if (googleMap != null) {
+            googleMap.setMyLocationEnabled(true);
+            setUpMap();
         }
     }
 
-    private void setUpBluetoothReceiver() {
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, 1);
-        }
-        bluetoothStatusReceiver = new BluetoothStatusReceiver(pinDropper);
-        IntentFilter aclDisconnectIntent = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
-        IntentFilter aclDisconnectRequestedIntent = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-        IntentFilter aclConnectedIntent = new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED);
-        this.registerReceiver(bluetoothStatusReceiver, aclDisconnectIntent);
-        this.registerReceiver(bluetoothStatusReceiver, aclDisconnectRequestedIntent);
-        this.registerReceiver(bluetoothStatusReceiver, aclConnectedIntent);
-    }
+
+
 
     /**
      * This is where we can add markers or lines, add listeners or move the camera.
@@ -116,17 +110,17 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
      */
     private void setUpMap() {
         float zoom = 15;
-        Location initialPin = pinDropper.dropPinForOldBluetoothDisconnect("Car Location?");
-        if (initialPin == null) {
+        Location initialPin = bluetoothFinder.cached();
+        if (bluetoothFinder.cached() != null) {
+            dropPinAt(initialPin, "Car Location?");//TODO: turn into resource?
+        } else{
             // Creating a criteria object to retrieve provider
             Criteria criteria = new Criteria();
-
             // Getting the name of the best provider
             String provider = LocationManager.GPS_PROVIDER;
-
             // Getting Current Location
             initialPin = locationManager.getLastKnownLocation(provider);
-            pinDropper.dropPin("start location");
+            dropPinAt(locationManager.getLastKnownLocation(provider), "Start Location"); //TODO: turn into resource?
         }
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(getLatLngForLocation(initialPin), zoom);
         googleMap.animateCamera(cameraUpdate);
@@ -135,19 +129,18 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        state.putParcelable(lastBluetoothDisconnectLocationKey, pinDropper.getLastBlueToothDisconnectLocation());
+        state.putParcelable(lastBluetoothDisconnectLocationKey, bluetoothFinder.cached());
     }
 
     @Override
     protected void onStop() {
         locationClient.disconnect();
-        this.unregisterReceiver(bluetoothStatusReceiver);
+        bluetoothStatusReceiver.close(this);
         super.onStop();
     }
 
     @Override
     public void onConnected(Bundle dataBundle) {
-        pinDropper.setLocationClientConnected(true);
     }
 
     /*
@@ -159,8 +152,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         // Display the connection status
         Toast.makeText(this, "Disconnected from google maps.",
                 Toast.LENGTH_SHORT).show();
-        pinDropper.setLocationClientConnected(false);
-
     }
 
     /*
@@ -177,7 +168,13 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
          */
         Toast.makeText(this, "Connection failed. Please re-connect.",
                 Toast.LENGTH_SHORT).show();
-        pinDropper.setLocationClientConnected(false);
+    }
+
+    private Location dropPinAt(Location location, String title){
+        googleMap.addMarker(new MarkerOptions()
+                .title(title)
+                .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        return location;
     }
 
     private static LatLng getLatLngForLocation(Location location) {
