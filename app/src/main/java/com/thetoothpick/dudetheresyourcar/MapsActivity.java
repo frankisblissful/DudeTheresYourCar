@@ -26,7 +26,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     private GoogleMap googleMap; // Might be null if Google Play services APK is not available.
 
-    private static final String TAG = "MapsActivity";
+    public static final String TAG = "MapsActivity";
 
     private BluetoothFinder bluetoothFinder = null;
 
@@ -120,7 +120,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
             String provider = LocationManager.GPS_PROVIDER;
             // Getting Current Location
             initialPin = locationManager.getLastKnownLocation(provider);
-            dropPinAt(locationManager.getLastKnownLocation(provider), "Start Location"); //TODO: turn into resource?
         }
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(getLatLngForLocation(initialPin), zoom);
         googleMap.animateCamera(cameraUpdate);
@@ -134,9 +133,13 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     @Override
     protected void onStop() {
-        locationClient.disconnect();
-        bluetoothStatusReceiver.close(this);
         super.onStop();
+    }
+
+    @Override
+    protected  void onDestroy(){
+        bluetoothStatusReceiver.close(this);
+        super.onDestroy();
     }
 
     @Override
