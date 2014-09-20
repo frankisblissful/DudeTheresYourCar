@@ -9,4 +9,5 @@ public interface Finder {
     public Location find();
     public Location cached();
     public Location getCurrentLocation();
+    public void cache(Location location);
 }

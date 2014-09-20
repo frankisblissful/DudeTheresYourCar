@@ -7,26 +7,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.app.FragmentActivity;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import static com.thetoothpick.dudetheresyourcar.MapsActivity.TAG;
-
 /**
  * Created by frank on 8/26/14.
  */
 public class BluetoothStatusReceiver extends BroadcastReceiver {
 
-    private final BluetoothFinder bluetoothFinder;
+    private final Finder finder;
 
     private final GoogleMap googleMap;
 
-    public BluetoothStatusReceiver(BluetoothFinder bluetoothFinder, GoogleMap googleMap) {
-        this.bluetoothFinder = bluetoothFinder;
+    public BluetoothStatusReceiver(Finder finder, GoogleMap googleMap) {
+        this.finder = finder;
         this.googleMap = googleMap;
     }
 
@@ -37,11 +34,11 @@ public class BluetoothStatusReceiver extends BroadcastReceiver {
             return;
         }
         if (action.equals(BluetoothDevice.ACTION_ACL_DISCONNECTED)){
-            bluetoothFinder.bluetoothDisconnected();
+            finder.find();
             String title = "Dude there's your car?";
             googleMap.addMarker(new MarkerOptions()
                     .title(title)
-                    .position(new LatLng(bluetoothFinder.cached().getLatitude(), bluetoothFinder.cached().getLongitude())));
+                    .position(new LatLng(finder.cached().getLatitude(), finder.cached().getLongitude())));
         }
         if (action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)){
             Toast.makeText(context, "bluetooth connected", Toast.LENGTH_SHORT).show();

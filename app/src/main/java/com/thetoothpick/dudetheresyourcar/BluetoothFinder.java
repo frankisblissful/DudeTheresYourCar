@@ -43,6 +43,11 @@ public final class BluetoothFinder implements Finder {
         return getLastKnownPosition();
     }
 
+    @Override
+    public void cache(Location location) {
+        lastBluetoothDisconnectLocation = location;
+    }
+
     public Location getLastKnownPosition() {
         // Creating a criteria object to retrieve provider
         Criteria criteria = new Criteria();
@@ -58,10 +63,8 @@ public final class BluetoothFinder implements Finder {
 
     @Override
     public Location find() {
-        if (lastBluetoothDisconnectLocation != null) {
-            return lastBluetoothDisconnectLocation;
-        }
-        return getCurrentLocation();
+        lastBluetoothDisconnectLocation = getCurrentLocation();
+        return lastBluetoothDisconnectLocation;
     }
 
     @Override

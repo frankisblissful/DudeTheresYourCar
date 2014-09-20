@@ -1,9 +1,6 @@
 package com.thetoothpick.dudetheresyourcar;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
@@ -28,7 +25,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     public static final String TAG = "MapsActivity";
 
-    private BluetoothFinder bluetoothFinder = null;
+    private Finder finder = null;
 
     private BluetoothStatusReceiver bluetoothStatusReceiver = null;
 
@@ -44,7 +41,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded(savedInstanceState);
-        bluetoothStatusReceiver = new BluetoothStatusReceiver(bluetoothFinder, googleMap);
+        bluetoothStatusReceiver = new BluetoothStatusReceiver(finder, googleMap);
         bluetoothStatusReceiver.registerTo(this);
     }
 
@@ -80,6 +77,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
                     .getMap();
         }
         if (locationManager == null) {
+            
             locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         }
         if (locationClient == null) {
@@ -88,10 +86,10 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         locationClient.connect();
         // Check if we were successful in obtaining the map.
 
-        if (bluetoothFinder == null){
-            bluetoothFinder = new BluetoothFinder(BluetoothAdapter.getDefaultAdapter(), locationManager, locationClient);
+        if (finder == null){
+            finder = new BluetoothFinder(BluetoothAdapter.getDefaultAdapter(), locationManager, locationClient);
             if (savedInstanceState != null){
-                bluetoothFinder.setLastBluetoothDisconnectLocation((Location) savedInstanceState.getParcelable(lastBluetoothDisconnectLocationKey));
+                finder.cache((Location) savedInstanceState.getParcelable(lastBluetoothDisconnectLocationKey));
             }
         }
         if (googleMap != null) {
@@ -110,8 +108,8 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
      */
     private void setUpMap() {
         float zoom = 15;
-        Location initialPin = bluetoothFinder.cached();
-        if (bluetoothFinder.cached() != null) {
+        Location initialPin = finder.cached();
+        if (finder.cached() != null) {
             dropPinAt(initialPin, "Car Location?");//TODO: turn into resource?
         } else{
             // Creating a criteria object to retrieve provider
@@ -128,7 +126,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        state.putParcelable(lastBluetoothDisconnectLocationKey, bluetoothFinder.cached());
+        state.putParcelable(lastBluetoothDisconnectLocationKey, finder.cached());
     }
 
     @Override
